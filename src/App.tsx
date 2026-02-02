@@ -159,8 +159,9 @@ export const App: React.FC = () => {
           prevTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
         );
       })
-      .catch(() => {
+      .catch(errors => {
         setError(ErrorOptions.UpdatingError);
+        throw errors;
       })
       .finally(() => {
         setProcessingsIds(ids => ids.filter(id => id !== todo.id));
