@@ -1,14 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { UserWarning } from './UserWarning';
 
 import { TodoList } from './components/TodoList/TodoList';
 import { Todo } from './type/Todo';
 import { Header } from './components/Header/Header';
-import cn from 'classnames';
 
 import { Footer } from './components/Footer/Footer';
 import { FilterOptions } from './type/filterOptions';
 import { ErrorOptions } from './type/errorOptions';
+
+import { ErrorNotification } from './components/ErrorNotification';
 
 import {
   addTodo,
@@ -23,8 +24,8 @@ export const App: React.FC = () => {
   const [error, setError] = useState<ErrorOptions>(ErrorOptions.Default);
   const [filter, setFilter] = useState<FilterOptions>(FilterOptions.All);
 
-  const [newtitle, setNewTitle] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [newtitle, setNewTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
   const [processingsIds, setProcessingsIds] = useState<number[]>([]);
@@ -37,20 +38,8 @@ export const App: React.FC = () => {
 
   const activeTodoCount = todos.filter(todo => !todo.completed).length;
 
-  // const filteredTodos = todos.filter(todo => {
-  //   if (filter === 'completed') {
-  //     return todo.completed;
-  //   }
-
-  //   if (filter === 'active') {
-  //     return !todo.completed;
-  //   }
-
-  //   return true;
-  // });
-
-  const filteredTodos = todos.filter(todo => {
-    switch (filter) {
+  function filteringByStatus(todo: Todo, currentFilter: FilterOptions) {
+    switch (currentFilter) {
       case FilterOptions.Completed:
         return todo.completed;
       case FilterOptions.Active:
@@ -58,11 +47,13 @@ export const App: React.FC = () => {
       default:
         return true;
     }
-  });
+  }
+
+  const filteredTodos = todos.filter(todo => filteringByStatus(todo, filter));
 
   useEffect(() => {
     setError(ErrorOptions.Default);
-    setLoading(true);
+    setIsLoading(true);
 
     getTodos()
       .then(setTodos)
@@ -70,34 +61,24 @@ export const App: React.FC = () => {
         setError(ErrorOptions.LoadingError);
       })
       .finally(() => {
-        setLoading(false);
+        setIsLoading(false);
       });
   }, []);
 
   useEffect(() => {
-    if (!error) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setError(ErrorOptions.Default);
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [error]);
-
-  useEffect(() => {
-    if (!loading) {
+    if (!isLoading) {
       inputRef.current?.focus();
     }
-  }, [loading]);
+  }, [isLoading]);
+
+  const closeError = useCallback(() => setError(ErrorOptions.Default), []);
 
   if (!USER_ID) {
     return <UserWarning />;
   }
 
   function handleAddPost({ userId = USER_ID, title, completed = false }: Todo) {
-    setLoading(true);
+    setIsLoading(true);
 
     addTodo({ userId, title, completed })
       .then(newTodo => {
@@ -106,7 +87,7 @@ export const App: React.FC = () => {
       })
       .catch(() => setError(ErrorOptions.AddingError))
       .finally(() => {
-        setLoading(false);
+        setIsLoading(false);
         setTempTodo(null);
       });
   }
@@ -120,7 +101,7 @@ export const App: React.FC = () => {
       return setError(ErrorOptions.TitleError);
     }
 
-    setLoading(true);
+    setIsLoading(true);
 
     const templateNewTodo: Todo = {
       userId: USER_ID,
@@ -146,7 +127,9 @@ export const App: React.FC = () => {
         setError(ErrorOptions.DeletingError);
       })
       .finally(() => {
-        setProcessingsIds(prev => prev.filter(tId => tId !== todoId));
+        setProcessingsIds(prev =>
+          prev.filter(prevTodoId => prevTodoId !== todoId),
+        );
       });
   }
 
@@ -156,7 +139,9 @@ export const App: React.FC = () => {
     return updateTodo(todo)
       .then(updatedTodo => {
         setTodos(prevTodos =>
-          prevTodos.map(t => (t.id === todo.id ? updatedTodo : t)),
+          prevTodos.map(prevTodo =>
+            prevTodo.id === todo.id ? updatedTodo : prevTodo,
+          ),
         );
       })
       .catch(errors => {
@@ -238,7 +223,7 @@ export const App: React.FC = () => {
           setTitle={setNewTitle}
           inputRef={inputRef}
           onSubmit={handleSubmit}
-          loading={loading}
+          loading={isLoading}
           onToggleAll={handleToggleAll}
         />
 
@@ -252,7 +237,7 @@ export const App: React.FC = () => {
             onToggle={handleToggle}
           />
         )}
-        {/* Hide the footer if there are no todos */}
+
         {todos.length > 0 && (
           <Footer
             filter={filter}
@@ -264,23 +249,7 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* DON'T use conditional rendering to hide the notification */}
-      {/* Add the 'hidden' class to hide the message smoothly */}
-      <div
-        data-cy="ErrorNotification"
-        className={cn(
-          'notification is-danger is-light has-text-weight-normal',
-          { hidden: !error },
-        )}
-      >
-        <button
-          data-cy="HideErrorButton"
-          type="button"
-          className="delete"
-          onClick={() => setError(ErrorOptions.Default)}
-        />
-        {error}
-      </div>
+      <ErrorNotification error={error} onClose={closeError} />
     </div>
   );
 };

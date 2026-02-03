@@ -18,49 +18,34 @@ export const Footer: React.FC<Props> = ({
   activeTodoCount,
   onClearCompleted,
 }) => {
+  const filters: FilterOptions[] = [
+    FilterOptions.All,
+    FilterOptions.Active,
+    FilterOptions.Completed,
+  ];
+
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
         {activeTodoCount} items left
       </span>
 
-      {/* Active link should have the 'selected' class */}
       <nav className="filter" data-cy="Filter">
-        <a
-          href="#/"
-          className={cn('filter__link', {
-            selected: filter === FilterOptions.All,
-          })}
-          data-cy="FilterLinkAll"
-          onClick={() => setFilter(FilterOptions.All)}
-        >
-          All
-        </a>
-
-        <a
-          href="#/active"
-          className={cn('filter__link', {
-            selected: filter === FilterOptions.Active,
-          })}
-          data-cy="FilterLinkActive"
-          onClick={() => setFilter(FilterOptions.Active)}
-        >
-          Active
-        </a>
-
-        <a
-          href="#/completed"
-          className={cn('filter__link', {
-            selected: filter === FilterOptions.Completed,
-          })}
-          data-cy="FilterLinkCompleted"
-          onClick={() => setFilter(FilterOptions.Completed)}
-        >
-          Completed
-        </a>
+        {filters.map(filterOption => (
+          <a
+            key={filterOption}
+            href={`#/${filterOption}`}
+            className={cn('filter__link', {
+              selected: filter === filterOption,
+            })}
+            data-cy={`FilterLink${filterOption.charAt(0).toUpperCase()}${filterOption.slice(1)}`}
+            onClick={() => setFilter(filterOption)}
+          >
+            {filterOption}
+          </a>
+        ))}
       </nav>
 
-      {/* this button should be disabled if there are no completed todos */}
       <button
         type="button"
         className="todoapp__clear-completed"

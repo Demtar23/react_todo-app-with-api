@@ -6,20 +6,20 @@ type Props = {
   todo: Todo;
   onDelete?: (todoId: number) => void;
   isLoading?: boolean;
-  onUpdate: (todo: Todo) => Promise<void>;
-  onToggle: (todoId: number) => void;
+  onUpdate?: (todo: Todo) => Promise<void>;
+  onToggle?: (todoId: number) => void;
 };
 
 export const TodoListItem: React.FC<Props> = ({
   todo,
-  onDelete = () => {},
+  onDelete,
   isLoading,
-  onUpdate = () => Promise.resolve(),
+  onUpdate,
   onToggle,
 }) => {
   const { id, title, completed } = todo;
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editedTitle, setEditedTitle] = useState<string>(title);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(title);
 
   const editInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -29,7 +29,7 @@ export const TodoListItem: React.FC<Props> = ({
     }
   }, [isEditing]);
 
-  function savedChanges() {
+  function handleEditSave() {
     const trimmedTitle = editedTitle.trim();
 
     if (trimmedTitle === title) {
@@ -39,12 +39,12 @@ export const TodoListItem: React.FC<Props> = ({
     }
 
     if (!trimmedTitle) {
-      onDelete(id);
+      onDelete?.(id);
 
       return;
     }
 
-    onUpdate({ ...todo, title: trimmedTitle })
+    onUpdate?.({ ...todo, title: trimmedTitle })
       .then(() => {
         setIsEditing(false);
       })
@@ -62,7 +62,7 @@ export const TodoListItem: React.FC<Props> = ({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    savedChanges();
+    handleEditSave();
   }
 
   return (
@@ -78,7 +78,7 @@ export const TodoListItem: React.FC<Props> = ({
           type="checkbox"
           className="todo__status"
           checked={completed}
-          onChange={() => onToggle(id)}
+          onChange={() => onToggle?.(id)}
         />
       </label>
 
@@ -92,7 +92,7 @@ export const TodoListItem: React.FC<Props> = ({
             onChange={event => setEditedTitle(event.target.value)}
             ref={editInputRef}
             checked={completed}
-            onBlur={savedChanges}
+            onBlur={handleEditSave}
             onKeyUp={handleKeyUp}
           />
         </form>
@@ -114,13 +114,12 @@ export const TodoListItem: React.FC<Props> = ({
           type="button"
           className="todo__remove"
           data-cy="TodoDelete"
-          onClick={() => onDelete(id)}
+          onClick={() => onDelete?.(id)}
         >
           ×
         </button>
       )}
 
-      {/* overlay will cover the todo while it is being deleted or updated */}
       <div
         data-cy="TodoLoader"
         className={cn('modal overlay', {
